@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/modules/shared/ui/card";
 import { Button } from "@/modules/shared/ui/button";
 import { Badge } from "@/modules/shared/ui/badge";
 import { useSchools, type SchoolListItem } from "@/lib/api/hooks/useDomains";
-import { useOnboardSchool, useUpdateSchool } from "@/lib/api/hooks/useSuperAdmin";
+import { useOnboardSchool, useUpdateSchool, useUpdateSubscription } from "@/lib/api/hooks/useSuperAdmin";
 import {
   Plus, Search, Building2, CheckCircle, XCircle, Eye, Edit2,
   ChevronRight, X, AlertTriangle
@@ -23,15 +23,15 @@ function apiToSchool(s: SchoolListItem): School {
     id: s.id,
     name: s.name,
     city: s.city ?? "—",
-    state: "",
+    state: s.state ?? "",
     plan: s.plan ?? "Free",
     students: s.studentCount,
     staff: s.userCount,
     status: s.isActive ? "ACTIVE" : "SUSPENDED",
     joined: s.createdAt ? s.createdAt.slice(0, 10) : "",
-    adminEmail: "",
+    adminEmail: s.adminEmail ?? "",
     adminName: "",
-    phone: "",
+    phone: s.phone ?? "",
   };
 }
 
@@ -52,6 +52,7 @@ export function SchoolsPage() {
   const schoolsQuery = useSchools({ pageSize: 100 });
   const onboardSchool = useOnboardSchool();
   const updateSchool = useUpdateSchool();
+  const updateSubscription = useUpdateSubscription();
   const [schools, setSchools] = useState<School[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -116,10 +117,34 @@ export function SchoolsPage() {
     );
   };
 
-  // Edit save — only isActive supported by API; contact fields are local display
   const handleEditSave = () => {
-    setEditSchool(null);
-    showToast("✅ Institute details updated (contact fields are display-only until API supports them)");
+    if (!editSchool) return;
+    const isPlanChanged = editForm.plan && editForm.plan !== editSchool.plan;
+
+    updateSchool.mutate(
+      {
+        id: editSchool.id,
+        payload: {
+          name: editForm.name,
+          city: editForm.city,
+          state: editForm.state,
+          primaryPhone: editForm.phone,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (isPlanChanged && editForm.plan) {
+            updateSubscription.mutate({
+              schoolId: editSchool.id,
+              payload: { plan: editForm.plan.toUpperCase() }
+            });
+          }
+          setEditSchool(null);
+          showToast("✅ Institute details updated successfully");
+        },
+        onError: () => showToast("❌ Failed to update institute details"),
+      }
+    );
   };
 
   // Suspend / Activate

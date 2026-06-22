@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Topbar } from "@/modules/shared/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/modules/shared/ui/card";
 import { Badge } from "@/modules/shared/ui/badge";
-import { useAuditLogs } from "@/lib/api/hooks/useSuperAdmin";
+import { useAuditLogs, type AuditEntry } from "@/lib/api/hooks/useSuperAdmin";
 import { Search } from "lucide-react";
 
 const severityBadge = (action: string) => {
@@ -15,11 +15,11 @@ const severityBadge = (action: string) => {
 export function AuditPage() {
   const [search, setSearch] = useState("");
   const logsQuery = useAuditLogs({ pageSize: 100 });
-  const logs = (logsQuery.data?.data ?? []).map(l => ({
+  const logs = (logsQuery.data?.data ?? []).map((l: AuditEntry) => ({
     id: l.id,
     ts: new Date(l.createdAt).toLocaleString(),
-    actor: l.performedById.slice(-8),
-    role: "—",
+    actor: l.actorUsername ?? l.actorEmail ?? l.performedById.slice(-8),
+    role: l.actorRole ?? "—",
     institute: l.schoolId?.slice(-8) ?? "—",
     action: l.action,
     resource: `${l.entityType} ${l.entityId}`,
@@ -27,7 +27,7 @@ export function AuditPage() {
     severity: l.action.includes("SUSPEND") || l.action.includes("FAILED") ? "danger" : l.action.includes("UPDATE") ? "warning" : "info",
   }));
 
-  const filtered = logs.filter(l =>
+  const filtered = logs.filter((l: typeof logs[0]) =>
     l.actor.includes(search) || l.action.includes(search) || l.resource.includes(search) || l.institute.includes(search)
   );
 

@@ -60,6 +60,9 @@ export interface AuditEntry {
   id: string;
   schoolId: string | null;
   performedById: string;
+  actorEmail: string | null;
+  actorUsername: string | null;
+  actorRole: string | null;
   action: string;
   entityType: string;
   entityId: string;
@@ -151,6 +154,28 @@ export function usePlatformUsers(params: { page?: number; pageSize?: number; sea
       return data;
     },
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useCreatePlatformUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await apiClient.post("/super-admin/users", payload);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["super-admin", "users"] }),
+  });
+}
+
+export function useUpdatePlatformUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: Record<string, unknown> }) => {
+      const { data } = await apiClient.patch(`/super-admin/users/${id}`, payload);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["super-admin", "users"] }),
   });
 }
 

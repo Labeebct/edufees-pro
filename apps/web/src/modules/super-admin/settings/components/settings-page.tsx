@@ -74,13 +74,16 @@ export function SettingsPage() {
     if (data.security) setSecurity(data.security);
     if (data.notifications) setNotifSettings(data.notifications);
     if (data.gateways?.length) {
-      setGateways(data.gateways.map((g, i) => ({
+      setGateways(data.gateways.map((g: any, i: number) => ({
         id: i + 1,
         name: g.name,
         mode: g.mode,
         keyId: g.keyId,
         active: g.active,
       })));
+    }
+    if ((data as any).bankAccounts?.length) {
+      setBankAccounts((data as any).bankAccounts);
     }
   }, [settingsQuery.data]);
 
@@ -105,39 +108,70 @@ export function SettingsPage() {
     if (!bankForm.accountName || !bankForm.bankName || !bankForm.accountNo || !bankForm.ifsc) {
       showToast("⚠️ Please fill required fields"); return;
     }
+    let updated: BankAccount[];
     if (editBank) {
-      setBankAccounts(prev => prev.map(b => b.id === editBank.id ? { ...b, ...bankForm } : b));
-      showToast("✅ Bank account updated");
+      updated = bankAccounts.map(b => b.id === editBank.id ? { ...b, ...bankForm } : b);
     } else {
-      setBankAccounts(prev => [...prev, { id: Date.now(), ...bankForm, primary: prev.length === 0 }]);
-      showToast("✅ Bank account added");
+      updated = [...bankAccounts, { id: Date.now(), ...bankForm, primary: bankAccounts.length === 0 }];
     }
+    setBankAccounts(updated);
+    updateSettings.mutate(
+      { bankAccounts: updated },
+      {
+        onSuccess: () => showToast(editBank ? "✅ Bank account updated" : "✅ Bank account added"),
+        onError: () => showToast("❌ Failed to save bank account"),
+      }
+    );
     setShowBankModal(false);
   };
   const deleteBank = (id: number) => {
-    setBankAccounts(prev => prev.filter(b => b.id !== id));
-    showToast("🗑️ Bank account removed");
+    const updated = bankAccounts.filter(b => b.id !== id);
+    setBankAccounts(updated);
+    updateSettings.mutate(
+      { bankAccounts: updated },
+      { onSuccess: () => showToast("🗑️ Bank account removed") }
+    );
   };
   const setPrimary = (id: number) => {
-    setBankAccounts(prev => prev.map(b => ({ ...b, primary: b.id === id })));
-    showToast("✅ Primary account updated");
+    const updated = bankAccounts.map(b => ({ ...b, primary: b.id === id }));
+    setBankAccounts(updated);
+    updateSettings.mutate(
+      { bankAccounts: updated },
+      { onSuccess: () => showToast("✅ Primary account updated") }
+    );
   };
 
   const saveGateway = () => {
     if (!gwForm.keyId || !gwForm.keySecret) { showToast("⚠️ Enter API Key and Secret"); return; }
-    setGateways(prev => [...prev, { id: Date.now(), name: gwForm.name, mode: gwForm.mode, keyId: gwForm.keyId, active: false }]);
-    showToast(`✅ ${gwForm.name} gateway added`);
+    const newGw: PayGateway = { id: Date.now(), name: gwForm.name, mode: gwForm.mode, keyId: gwForm.keyId, active: false };
+    const updated = [...gateways, newGw];
+    setGateways(updated);
+    updateSettings.mutate(
+      { gateways: updated.map(g => ({ name: g.name, mode: g.mode, keyId: g.keyId, active: g.active })) },
+      {
+        onSuccess: () => showToast(`✅ ${gwForm.name} gateway added`),
+        onError: () => showToast("❌ Failed to save gateway"),
+      }
+    );
     setShowGatewayModal(false);
     setGwForm({ name: "Razorpay", mode: "Test", keyId: "", keySecret: "" });
   };
   const toggleGateway = (id: number) => {
-    setGateways(prev => prev.map(g => ({ ...g, active: g.id === id })));
+    const updated = gateways.map(g => ({ ...g, active: g.id === id }));
+    setGateways(updated);
     const gw = gateways.find(g => g.id === id);
-    showToast(`✅ ${gw?.name} set as active gateway`);
+    updateSettings.mutate(
+      { gateways: updated.map(g => ({ name: g.name, mode: g.mode, keyId: g.keyId, active: g.active })) },
+      { onSuccess: () => showToast(`✅ ${gw?.name} set as active gateway`) }
+    );
   };
   const deleteGateway = (id: number) => {
-    setGateways(prev => prev.filter(g => g.id !== id));
-    showToast("🗑️ Gateway removed");
+    const updated = gateways.filter(g => g.id !== id);
+    setGateways(updated);
+    updateSettings.mutate(
+      { gateways: updated.map(g => ({ name: g.name, mode: g.mode, keyId: g.keyId, active: g.active })) },
+      { onSuccess: () => showToast("🗑️ Gateway removed") }
+    );
   };
 
   const handleChangePassword = () => {

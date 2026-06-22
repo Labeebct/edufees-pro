@@ -286,6 +286,9 @@ export interface SchoolListItem {
   slug: string;
   schoolType: string | null;
   city: string | null;
+  state: string | null;
+  phone: string | null;
+  adminEmail: string | null;
   isActive: boolean;
   plan: string | null;
   subscriptionStatus: string | null;

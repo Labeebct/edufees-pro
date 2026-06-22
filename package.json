@@ -19,6 +19,7 @@
     "deploy:web": "npm run deploy --workspace @edufees/web",
     "db:generate": "npm run db:generate --workspace @edufees/api",
     "db:migrate": "npm run db:migrate --workspace @edufees/api",
-    "db:seed": "npm run db:seed --workspace @edufees/api"
+    "db:seed": "npm run db:seed --workspace @edufees/api",
+    "prisma:studio": "npm run db:studio --workspace @edufees/api"
   }
 }

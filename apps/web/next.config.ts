@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-const repo = "/edufees-pro";
+const repo = "/edufees";
 
 const nextConfig: NextConfig = {
   output: "export",

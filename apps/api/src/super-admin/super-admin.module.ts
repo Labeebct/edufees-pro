@@ -105,6 +105,26 @@ class UpdateSchoolDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  primaryPhone?: string;
 }
 
 class UpdateSubscriptionDto {
@@ -117,6 +137,21 @@ class UpdateSubscriptionDto {
   @IsOptional()
   @IsEnum(SubscriptionStatus)
   status?: SubscriptionStatus;
+}
+
+class CreatePlatformUserDto {
+  @ApiProperty() @IsEmail() email!: string;
+  @ApiProperty() @IsString() username!: string;
+  @ApiProperty() @IsString() @MinLength(6) password!: string;
+  @ApiProperty({ enum: UserRole }) @IsEnum(UserRole) role!: UserRole;
+  @ApiPropertyOptional() @IsOptional() @IsString() schoolId?: string;
+}
+
+class UpdatePlatformUserDto {
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsString() email?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() username?: string;
+  @ApiPropertyOptional({ enum: UserRole }) @IsOptional() @IsEnum(UserRole) role?: UserRole;
 }
 
 @Injectable()
@@ -225,6 +260,9 @@ class SuperAdminService {
       slug: s.slug,
       schoolType: s.schoolType,
       city: s.city,
+      state: s.state,
+      phone: s.primaryPhone,
+      adminEmail: s.primaryEmail,
       isActive: s.isActive,
       plan: s.subscription?.plan ?? null,
       subscriptionStatus: s.subscription?.status ?? null,
@@ -294,7 +332,13 @@ class SuperAdminService {
     if (!school) throw new NotFoundException('School not found');
     const updated = await this.prisma.school.update({
       where: { id },
-      data: { ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}) },
+      data: {
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        ...(dto.name ? { name: dto.name } : {}),
+        ...(dto.city ? { city: dto.city } : {}),
+        ...(dto.state ? { state: dto.state } : {}),
+        ...(dto.primaryPhone ? { primaryPhone: dto.primaryPhone } : {}),
+      },
     });
     await this.writeAudit(
       dto.isActive === false ? 'SCHOOL_SUSPENDED' : 'SCHOOL_UPDATED',
@@ -364,16 +408,65 @@ class SuperAdminService {
     return paginate(rows, total, query.page, query.pageSize);
   }
 
+  async createUser(dto: CreatePlatformUserDto) {
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        username: dto.username,
+        role: dto.role,
+        schoolId: dto.schoolId || null,
+        passwordHash: await bcrypt.hash(dto.password, 10),
+        mustChangePassword: true,
+      },
+    });
+    await this.writeAudit('PLATFORM_USER_CREATED', 'User', user.id, { email: user.email, role: user.role });
+    return user;
+  }
+
+  async updateUser(id: string, dto: UpdatePlatformUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        ...(dto.email ? { email: dto.email } : {}),
+        ...(dto.username ? { username: dto.username } : {}),
+        ...(dto.role ? { role: dto.role } : {}),
+      },
+    });
+    await this.writeAudit(
+      dto.isActive === false ? 'PLATFORM_USER_SUSPENDED' : 'PLATFORM_USER_UPDATED',
+      'User',
+      id,
+      { email: updated.email, role: updated.role, isActive: updated.isActive }
+    );
+    return updated;
+  }
+
   listAudit(query: PaginationQueryDto) {
     return this.prisma.auditLog
       .findMany({
         orderBy: { createdAt: 'desc' },
         skip: query.skip,
         take: query.take,
+        include: {
+          performedBy: { select: { email: true, username: true, role: true } },
+        },
       })
       .then(async (rows) => {
         const total = await this.prisma.auditLog.count();
-        return paginate(rows, total, query.page, query.pageSize);
+        return paginate(
+          rows.map((r) => ({
+            ...r,
+            actorEmail: r.performedBy?.email ?? r.performedById,
+            actorUsername: r.performedBy?.username ?? null,
+            actorRole: r.performedBy?.role ?? null,
+          })),
+          total,
+          query.page,
+          query.pageSize,
+        );
       });
   }
 
@@ -498,6 +591,16 @@ class SuperAdminController {
   @Get('users')
   listUsers(@Query() query: ListUsersQueryDto) {
     return this.svc.listUsers(query);
+  }
+
+  @Post('users')
+  createUser(@Body() dto: CreatePlatformUserDto) {
+    return this.svc.createUser(dto);
+  }
+
+  @Patch('users/:id')
+  updateUser(@Param('id') id: string, @Body() dto: UpdatePlatformUserDto) {
+    return this.svc.updateUser(id, dto);
   }
 
   @Get('audit')

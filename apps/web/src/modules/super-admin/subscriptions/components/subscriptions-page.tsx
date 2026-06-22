@@ -187,7 +187,7 @@ export function SubscriptionsPage() {
         {tab === 0 && (
           <div className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={openAddPlan}><Plus className="w-4 h-4" />Create New Plan</Button>
+              <Button variant="outline" onClick={() => showToast("⚠️ Plans are managed via system configuration.")}><Plus className="w-4 h-4" />Create New Plan</Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {plans.map(p => (
@@ -201,8 +201,8 @@ export function SubscriptionsPage() {
                       </span>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => openEditPlan(p)} className="p-1.5 text-gray-400 hover:text-blue-600 rounded"><Edit2 className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => setConfirmDeletePlan(p)} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => showToast("⚠️ Plans are managed via system configuration.")} className="p-1.5 text-gray-400 hover:text-blue-600 rounded"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => showToast("⚠️ Plans are managed via system configuration.")} className="p-1.5 text-gray-400 hover:text-red-500 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mb-3">Up to <strong>{p.maxStudents >= 999999 ? "Unlimited" : p.maxStudents.toLocaleString()}</strong> students · <strong>{subs.filter(s => s.plan === p.name).length}</strong> institutes on this plan</p>
@@ -214,7 +214,7 @@ export function SubscriptionsPage() {
                 </Card>
               ))}
               {/* Add plan card */}
-              <button onClick={openAddPlan} className="border-2 border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center gap-2 hover:border-purple-400 hover:bg-purple-50 transition-colors">
+              <button onClick={() => showToast("⚠️ Plans are managed via system configuration.")} className="border-2 border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center gap-2 hover:border-purple-400 hover:bg-purple-50 transition-colors">
                 <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center"><Plus className="w-5 h-5 text-gray-400" /></div>
                 <p className="text-sm text-gray-500 font-medium">Create New Plan</p>
               </button>
@@ -226,7 +226,7 @@ export function SubscriptionsPage() {
         {tab === 1 && (
           <div className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setShowAddSub(true)}><Plus className="w-4 h-4" />Add Subscription</Button>
+              <Button onClick={() => showToast("⚠️ Subscriptions are automatically managed via Institute onboarding.")}><Plus className="w-4 h-4" />Add Subscription</Button>
             </div>
             <Card>
               <CardContent className="p-0">
